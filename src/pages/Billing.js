@@ -9,8 +9,8 @@ import {
   Download,
   LifeBuoy,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 import { useApp } from "../context/AppContext";
 import { Card, CardHeader } from "../components/ui/Card";
@@ -29,16 +29,14 @@ function Row({ label, value }) {
 
 function InvoiceRow({ id, date, amount, status }) {
   const tone = status === "Payée" ? "emerald" : status === "En attente" ? "amber" : "slate";
+
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.15 }}
-      className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-slate-300 hover:shadow-md"
-    >
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-slate-300">
       <div className="min-w-0">
         <div className="text-sm font-semibold text-slate-900">Facture {id}</div>
         <div className="mt-0.5 text-xs text-slate-500">{date}</div>
       </div>
+
       <div className="flex items-center gap-3">
         <div className="text-sm font-extrabold text-slate-900">{amount}</div>
         <Pill tone={tone}>{status}</Pill>
@@ -47,7 +45,7 @@ function InvoiceRow({ id, date, amount, status }) {
           PDF
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -55,11 +53,8 @@ export default function Billing() {
   const { auth, server, plans } = useApp();
   const nav = useNavigate();
 
-  // ✅ Hooks TOUJOURS en haut (avant toute redirection)
-  const [loadingPortal, setLoadingPortal] = useState(false);
   const [loadingRenew, setLoadingRenew] = useState(false);
 
-  // ✅ Redirect propre via useEffect (pas de hooks conditionnels)
   useEffect(() => {
     if (!auth.user) nav("/login", { replace: true });
   }, [auth.user, nav]);
@@ -80,51 +75,47 @@ export default function Billing() {
     ];
   }, [plan?.priceMonthly, server.lastPayment]);
 
-  // Si pas connecté, on ne rend rien (la redirection se fait)
   if (!auth.user) return null;
 
-  const openStripePortalMock = async () => {
-    setLoadingPortal(true);
-    await sleep(900);
-    setLoadingPortal(false);
-    toastCopy("(Mock) Ouverture Stripe Customer Portal…");
+  const goStripe = () => {
+    if (!plan?.stripeLink) {
+      alert("Lien Stripe manquant pour ce plan. Ajoute plan.stripeLink dans PLANS.");
+      return;
+    }
+    window.location.assign(plan.stripeLink);
   };
 
-  const openPayPalPortalMock = async () => {
-    setLoadingPortal(true);
-    await sleep(900);
-    setLoadingPortal(false);
-    toastCopy("(Mock) Ouverture PayPal Billing…");
-  };
-
-  const renewMock = async () => {
+  const renewNow = async () => {
+    // UX sympa : petit loading avant de rediriger
     setLoadingRenew(true);
-    await sleep(900);
+    await sleep(350);
     setLoadingRenew(false);
-    toastCopy("(Mock) Renouvellement effectué !");
+    goStripe();
   };
 
   return (
     <div className="grid gap-8">
       {/* Header */}
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
-        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-slate-200/60 blur-3xl" />
-        <div className="absolute -left-24 -bottom-24 h-64 w-64 rounded-full bg-slate-200/60 blur-3xl" />
-
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
               <Receipt className="h-3.5 w-3.5" />
               Facturation • Abonnement
             </div>
-            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">Gérer la facturation</h2>
+
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-4xl">
+              Gérer la facturation
+            </h2>
+
             <div className="text-sm text-slate-700">
               Plan : <span className="font-semibold">{plan?.name || "—"}</span>{" "}
               <span className="text-slate-500">•</span>{" "}
               <span className="font-semibold">{formatEUR(plan?.priceMonthly || 0)}/mo</span>
             </div>
+
             <div className="text-sm text-slate-600">
-              Ici tu mettras ton Stripe Customer Portal / PayPal Billing plus tard. Pour l’instant : mock UI.
+              Paiement via Stripe Payment Links. Le portail Stripe (Customer Portal) sera ajouté plus tard avec un backend.
             </div>
           </div>
 
@@ -151,7 +142,7 @@ export default function Billing() {
             icon={CreditCard}
             right={
               <Pill tone="emerald">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Actif
+                <CheckCircle2 className="h-3.5 w-3.5" /> Actif (prototype)
               </Pill>
             }
           />
@@ -163,19 +154,22 @@ export default function Billing() {
               label="Dernier paiement"
               value={server.lastPayment ? new Date(server.lastPayment).toLocaleString("fr-FR") : "—"}
             />
-            <Row label="Prochain renouvellement" value={server.lastPayment ? "Dans 30 jours (mock)" : "—"} />
+            <Row label="Prochain renouvellement" value={server.lastPayment ? "Dans 30 jours (prototype)" : "—"} />
 
             <Divider />
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="text-sm text-slate-600">
-                <span className="font-semibold text-slate-900">Actions :</span> renouveler, changer de plan, gérer les moyens de paiement.
+                <span className="font-semibold text-slate-900">Actions :</span>{" "}
+                renouveler maintenant ou changer de plan.
               </div>
+
               <div className="flex flex-wrap gap-2">
-                <Button loading={loadingRenew} onClick={renewMock}>
+                <Button loading={loadingRenew} onClick={renewNow}>
                   <RefreshCw className="h-4 w-4" />
-                  Renouveler (mock)
+                  Renouveler via Stripe
                 </Button>
+
                 <Button variant="secondary" onClick={() => nav("/pricing")}>
                   <CreditCard className="h-4 w-4" />
                   Changer de plan
@@ -185,31 +179,32 @@ export default function Billing() {
           </div>
         </Card>
 
-        {/* Portal */}
+        {/* Stripe box */}
         <Card className="overflow-hidden">
-          <CardHeader title="Portail de facturation" subtitle="Stripe / PayPal" icon={Shield} />
+          <CardHeader title="Stripe" subtitle="Paiement & gestion" icon={Shield} />
           <div className="p-6 space-y-3">
-            <Button className="w-full" loading={loadingPortal} onClick={openStripePortalMock}>
-              <CreditCard className="h-4 w-4" />
-              Ouvrir Stripe Portal (mock)
-            </Button>
-            <Button className="w-full" variant="secondary" loading={loadingPortal} onClick={openPayPalPortalMock}>
-              <Shield className="h-4 w-4" />
-              Ouvrir PayPal Billing (mock)
+            <Button className="w-full" onClick={goStripe}>
+              <ExternalLink className="h-4 w-4" />
+              Ouvrir Stripe Checkout
             </Button>
 
             <Divider />
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
-              À brancher : Stripe Customer Portal / PayPal Subscription Management + factures PDF.
+              Le Stripe Customer Portal (changer carte, annuler, factures réelles) nécessite un backend.
+              Pour l’instant : on passe par les Payment Links.
             </div>
+
+            <Button className="w-full" variant="ghost" onClick={() => toastCopy("(Mock) Portail Stripe… (backend requis)")}>
+              Ouvrir Stripe Portal
+            </Button>
           </div>
         </Card>
       </section>
 
       {/* Invoices */}
       <Card className="overflow-hidden">
-        <CardHeader title="Historique des factures" subtitle="Téléchargement PDF (mock)" icon={Receipt} />
+        <CardHeader title="Historique des factures" subtitle="Téléchargement PDF (prototype)" icon={Receipt} />
         <div className="p-6 grid gap-3">
           {invoices.map((inv) => (
             <InvoiceRow key={inv.id} id={inv.id} date={inv.date} amount={inv.amount} status={inv.status} />
