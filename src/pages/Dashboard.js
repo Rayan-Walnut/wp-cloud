@@ -39,7 +39,7 @@ function StatTile({ label, value }) {
 }
 
 export default function Dashboard() {
-  const { auth, server, setServer, plans } = useApp();
+  const { auth, server, setServer, plans, deleteInstallation: apiDeleteInstallation, refreshInstallation, loading } = useApp();
   const nav = useNavigate();
 
   useEffect(() => {
@@ -47,6 +47,7 @@ export default function Dashboard() {
   }, [auth.user, nav]);
 
   const [refreshing, setRefreshing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const plan = useMemo(
     () => plans.find((p) => p.id === server.planId) || plans[0],
@@ -82,17 +83,42 @@ export default function Dashboard() {
 
   const refreshAnalytics = async () => {
     setRefreshing(true);
-    await sleep(600);
-    const now = new Date().toISOString();
-    setServer((prev) => ({
-      ...prev,
-      analytics: {
-        visitors7d: Math.floor(50 + Math.random() * 900),
-        uptime30d: 99.4 + Math.random() * 0.6,
-        lastChecked: now,
-      },
-    }));
-    setRefreshing(false);
+    try {
+      // Rafraîchir les données depuis l'API
+      await refreshInstallation();
+
+      // Mock analytics (à remplacer par de vraies données plus tard)
+      const now = new Date().toISOString();
+      setServer((prev) => ({
+        ...prev,
+        analytics: {
+          visitors7d: Math.floor(50 + Math.random() * 900),
+          uptime30d: 99.4 + Math.random() * 0.6,
+          lastChecked: now,
+        },
+      }));
+    } catch (error) {
+      console.error("Erreur refresh:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDeleteInstallation = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer votre site WordPress ? Cette action est irréversible.")) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await apiDeleteInstallation();
+      alert("Site WordPress supprimé avec succès");
+    } catch (error) {
+      alert("Erreur lors de la suppression: " + error.message);
+      console.error("Erreur suppression:", error);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const statusPill = (
@@ -250,21 +276,10 @@ export default function Dashboard() {
             <Button
               className="w-full"
               variant="danger"
-              onClick={() => {
-                setServer((prev) => ({
-                  ...prev,
-                  domain: "",
-                  status: "none",
-                  createdAt: null,
-                  wpAdminUrl: "",
-                  siteUrl: "",
-                  lastPayment: null,
-                  analytics: { visitors7d: 0, uptime30d: 99.9, lastChecked: null },
-                }));
-                toastCopy("Site réinitialisé (mock).");
-              }}
+              loading={deleting}
+              onClick={handleDeleteInstallation}
             >
-              <Trash2 className="h-4 w-4" /> Réinitialiser le site
+              <Trash2 className="h-4 w-4" /> Supprimer le site WordPress
             </Button>
           </div>
         </Card>

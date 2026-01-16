@@ -119,7 +119,7 @@ function FAQItem({ q, a, open, onToggle }) {
 }
 
 export default function Pricing() {
-  const { plans } = useApp();
+  const { plans, auth } = useApp();
   const nav = useNavigate();
 
   // Toggle UI: mensuel/annuel (annuel = simulation tant que tu n'as pas créé des Payment Links annuels)
@@ -138,11 +138,15 @@ export default function Pricing() {
   const [faqOpen, setFaqOpen] = useState(0);
 
   const goStripe = (plan) => {
-    if (!plan?.stripeLink) {
-      alert("Lien Stripe manquant pour ce plan.");
+    // ⚠️ Forcer la connexion avant de choisir un plan
+    if (!auth.user) {
+      alert("Veuillez vous connecter ou créer un compte avant de choisir un plan.");
+      nav("/login");
       return;
     }
-    window.location.assign(plan.stripeLink);
+
+    // Rediriger vers la page de création avec le plan sélectionné
+    nav("/create", { state: { planId: plan.id } });
   };
 
   return (
