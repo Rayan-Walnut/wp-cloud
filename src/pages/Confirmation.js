@@ -51,30 +51,43 @@ export default function Confirmation() {
     }
   }, [auth.user, nav, params, server.domain, setServer]);
 
-  const ns = server.nameservers || DEFAULT_NS;
+  const ns = server.nameservers && server.nameservers.length > 0 ? server.nameservers : DEFAULT_NS;
 
   return (
     <div className="grid gap-6">
       <header className="space-y-2">
         <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">
-          Confirmation
+          Configuration DNS
         </h2>
         <p className="text-slate-600">
-          Paiement reçu, il reste la configuration DNS (nameservers Cloudflare).
+          Votre site WordPress est déployé ! Configurez maintenant les nameservers Cloudflare.
         </p>
       </header>
 
       <Card>
         <CardHeader
-          title="Paiement confirmé"
-          subtitle="Prochaine étape : configurer les nameservers"
+          title="Déploiement réussi"
+          subtitle="Configurez les nameservers pour activer votre site"
           icon={CheckCircle2}
-          right={<Pill tone="emerald">OK</Pill>}
+          right={<Pill tone="emerald">Déployé</Pill>}
         />
         <div className="p-5 space-y-4">
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-            ✅ Ton paiement est validé (mode prototype). Configure maintenant les nameservers ci-dessous.
+            ✅ Votre site WordPress est déployé ! Configurez les nameservers ci-dessous chez votre registrar de domaine pour activer le site.
           </div>
+
+          {server.domain && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              <div className="font-semibold">Domaine : {server.domain}</div>
+              {server.mysql_password && (
+                <div className="mt-2 text-xs">
+                  <strong>Mot de passe MySQL :</strong> <code className="bg-blue-100 px-1 py-0.5 rounded">{server.mysql_password}</code>
+                  <br />
+                  <span className="text-blue-700">⚠️ Sauvegardez ce mot de passe, il ne sera plus affiché</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <Divider />
 

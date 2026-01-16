@@ -38,7 +38,7 @@ function SummaryCard({ domain, plan }) {
 }
 
 export default function CreateServer() {
-  const { auth, server, setServer, plans } = useApp();
+  const { auth, server, setServer, plans, deployWordPress, loading: apiLoading } = useApp();
   const nav = useNavigate();
   const loc = useLocation();
 
@@ -111,28 +111,40 @@ export default function CreateServer() {
 
               <Button
                 className="w-full"
-                loading={loading}
+                loading={loading || apiLoading}
                 onClick={async () => {
                   const d = domain.trim().toLowerCase();
                   if (!isValidDomain(d)) {
                     setError("Veuillez entrer un domaine valide (ex: monsite.com).");
                     return;
                   }
-                  setLoading(true);
-                  await sleep(600);
-                  setServer((prev) => ({
-                    ...prev,
-                    domain: d,
-                    planId,
-                    status: "awaiting_payment",
-                  }));
-                  setLoading(false);
-                  nav("/checkout");
+
+                  try {
+                    setLoading(true);
+                    setError("");
+
+                    // Déployer via l'API
+                    await deployWordPress(d, auth.user.email);
+
+                    setLoading(false);
+                    // Rediriger vers la confirmation DNS
+                    nav("/confirmation");
+                  } catch (err) {
+                    setLoading(false);
+                    setError(err.message || "Erreur lors du déploiement. Veuillez réessayer.");
+                    console.error("Erreur déploiement:", err);
+                  }
                 }}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Continuer vers le paiement
+                Déployer WordPress maintenant
               </Button>
+
+              {error && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
             </div>
           </Card>
         </div>
